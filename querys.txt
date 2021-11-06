@@ -1,0 +1,50 @@
+query {
+  personCount
+  allPersonsData: allPersons {
+    name
+  } 
+  personsWithPhone: allPersons(phone:YES) {
+    name
+  }
+  personsWithoutPhone:allPersons(phone:NO) {
+    name
+  }
+}
+
+
+///
+
+query Query($name: String!) {
+  findPerson(name: $name) {
+      phone
+      address {
+        city
+      }
+  }
+}
+
+/////
+mutation Mutation($name: String!, $street: String!, $city: String!) {
+  addPerson(name: $name, street: $street, city: $city) {
+    name
+    address {
+      city
+      street
+    }
+    id
+  }
+}
+
+////
+query {
+  allPersons(phone: YES) {
+    name
+    phone
+  }
+}
+/////
+mutation($name: String!, $phone: String!){
+  editNumber(name: $name, phone: $phone) {
+    name
+  }
+}
