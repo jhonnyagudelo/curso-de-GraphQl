@@ -1,27 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { gql, useLazyQuery } from "@apollo/client";
-
-const FIND_PERSON = gql`
-  query findPersonByName($nameToSearch: String!) {
-    findPerson(name: $nameToSearch) {
-      name
-      phone
-      address {
-        street
-        city
-      }
-    }
-  }
-`;
+import { FIND_PERSON } from "./person/graphql-queries";
 
 export const Persons = ({ persons }) => {
   const [getPerson, result] = useLazyQuery(FIND_PERSON);
   const [person, setPerson] = useState(null);
+
   const showPerson = (name) => {
     getPerson({ variables: { nameToSearch: name } });
   };
-
-  console.log({ persons });
 
   useEffect(() => {
     if (result.data) {
@@ -34,25 +21,26 @@ export const Persons = ({ persons }) => {
       <div>
         <h2>{person.name}</h2>
         <div>{person.address.street}</div>
+        <div>{person.phone}</div>
         <button onClick={() => setPerson(null)}> close </button>
       </div>
     );
   }
 
-  if (persons == null) return null;
+  if (persons === null) return null;
   return (
-    <div>
+    <>
       <h2>Persons</h2>
-      {persons.map((p) => (
+      {persons.map((person) => (
         <div
-          key={p.id}
+          key={person.id}
           onClick={() => {
-            showPerson(p.name);
+            showPerson(person.name);
           }}
         >
-          {p.name} {p.phone}
+          {person.name} {person.phone}
         </div>
       ))}
-    </div>
+    </>
   );
 };

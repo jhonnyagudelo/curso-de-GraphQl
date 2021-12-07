@@ -5,10 +5,10 @@ const MONGODB_URI =
 
 mongoose
   .connect(MONGODB_URI, {
+    //useCreateIndex: true,
+    //useFindAndModify: false,
     useNewUrlParser: true,
     useUnifiedTopology: true,
-    useFindAndModify: false,
-    useCreateIndex: true,
   })
   .then(() => {
     console.log("connect to mongo");

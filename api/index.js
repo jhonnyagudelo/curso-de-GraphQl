@@ -1,7 +1,10 @@
-import { ApolloServer, gql } from "apollo-server";
-import { v1 as uuid } from "uuid";
-import "./db";
-import Person from "./models/Person";
+import { ApolloServer, gql, UserInputError } from "apollo-server";
+import "./db.js";
+import Person from "./models/Person.js";
+import User from "./models/user.js";
+import jwt from "jsonwebtoken";
+
+const JWT_SECRET = "tu_palabra_secreta";
 
 const typeDefs = gql`
   enum YesNo {
@@ -20,10 +23,21 @@ const typeDefs = gql`
     id: ID!
   }
 
+  type User {
+    username: String!
+    friends: [Person]!
+    id: ID!
+  }
+
+  type Token {
+    value: String!
+  }
+
   type Query {
     personCount: Int!
     allPersons(phone: YesNo): [Person]!
     findPerson(name: String!): Person
+    me: User
   }
 
   type Mutation {
@@ -36,6 +50,9 @@ const typeDefs = gql`
     ): Person
 
     editNumber(name: String!, phone: String!): Person
+
+    createUser(username: String!): User
+    login(username: String!, password: String!): Token
   }
 `;
 
@@ -44,8 +61,8 @@ const resolvers = {
     personCount: () => Person.collection.countDocuments(),
 
     allPersons: async (root, args) => {
-      // falta el filtro del celular
-      return Person.find({});
+      if (!args.phone) return Person.find({});
+      return Person.find({ phone: { $exists: args.phone === "YES " } });
     },
 
     findPerson: (root, args) => {
@@ -54,23 +71,55 @@ const resolvers = {
     },
   },
   // laura marcela valencia
+
   Mutation: {
-    addPerson: (root, args) => {
-       
-      const person = new Person
-      const person = { ...args, id: uuid() };
-      persons.push(person); //update database with new person
+    addPerson: async (root, args) => {
+      const person = new Person({ ...args });
+      try {
+        await person.save();
+      } catch (e) {
+        throw new UserInputError(error.message, {
+          invalidArgs: args,
+        });
+      }
       return person;
     },
 
-    editNumber: (root, args) => {
-      const personIndex = persons.findIndex((p) => p.name === args.name);
-      if (!personIndex === -1) return null;
-      const person = persons[personIndex];
+    editNumber: async (root, args) => {
+      const person = await Person.findOne({ name: args.name });
+      if (!person) return;
+      person.phone = args.phone;
+      try {
+        await person.save();
+      } catch (e) {
+        throw new UserInputError(error.message, {
+          invalidArgs: args,
+        });
+      }
+      return person;
+    },
 
-      const updatedPerson = { ...person, phone: args.phone };
-      persons[personIndex] = updatedPerson;
-      return updatedPerson;
+    createUser: (root, args) => {
+      const user = new User({ username: args.username });
+      return user.save().catch((error) => {
+        throw new UserInputError(error.message, {
+          invalidArgs: args,
+        });
+      });
+    },
+
+    login: async (root, args) => {
+      const user = await User.findOne({ username: args.username });
+      if (!user || args.password !== "secret") {
+        throw new UserInputError("wrong credentials");
+      }
+      const userForToken = {
+        username: user.username,
+        id: user._id,
+      };
+      return {
+        value: jwt.sign(userForToken, JWT_SECRET),
+      };
     },
   },
 
@@ -96,4 +145,4 @@ const server = new ApolloServer({
 
 server.listen().then(({ url }) => {
   console.log(`server ready at ${url}`);
-});|
+});
